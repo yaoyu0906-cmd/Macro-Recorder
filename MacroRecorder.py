@@ -3,6 +3,11 @@ Macro Recorder v2.0
 Made by Alvin
 """
 
+"""
+Bugs:
+No shift and scroll.
+"""
+
 import tkinter as tk
 import threading
 import time
