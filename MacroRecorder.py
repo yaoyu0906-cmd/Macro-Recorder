@@ -1,6 +1,6 @@
 """
 Macro Recorder v2.0
-Made by Alvin (clean upgraded version)
+Made by Alvin
 """
 
 import tkinter as tk
@@ -15,7 +15,7 @@ import keyboard
 user32 = ctypes.windll.user32
 
 # =========================
-# CONFIG (HOTKEYS)
+# CONFIG
 # =========================
 
 START_KEY = 'ctrl+alt+r'
@@ -62,7 +62,7 @@ events = []
 loop_forever = False
 
 # =========================
-# SMOOTH MOUSE
+# MOUSE
 # =========================
 
 def smooth_move(x1, y1, x2, y2, duration=0.015):
@@ -101,7 +101,6 @@ def record():
 
         x, y = get_mouse_pos()
 
-        # 🎯 SMART FILTER
         if abs(x - last_mouse[0]) > 2 or abs(y - last_mouse[1]) > 2:
             events.append({"time": t, "type": "mouse", "x": x, "y": y})
             last_mouse = (x, y)
@@ -137,7 +136,7 @@ def record():
         time.sleep(0.008)
 
 # =========================
-# AUTO TRIM
+# TRIM
 # =========================
 
 def trim_events():
@@ -196,7 +195,6 @@ def replay():
                 break
 
     finally:
-        # 🔐 safety release
         for vk in range(256):
             release(vk)
 
@@ -241,17 +239,14 @@ def toggle_loop():
 root = tk.Tk()
 root.title("Macro Recorder v2.0")
 
-tk.Button(root, text="🔴 Record", command=start_record).pack(pady=5)
-tk.Button(root, text="⏹ Stop", command=stop_record).pack(pady=5)
-tk.Button(root, text="▶ Replay", command=start_replay).pack(pady=5)
-tk.Button(root, text="🔁 Toggle Loop", command=toggle_loop).pack(pady=5)
-
-tk.Button(root, text="💾 Save", command=lambda: json.dump(events, open(filedialog.asksaveasfilename(defaultextension=".json"), "w"))).pack(pady=5)
-tk.Button(root, text="📂 Load", command=lambda: globals().update(events=json.load(open(filedialog.askopenfilename())))).pack(pady=5)
-
+tk.Button(root, text="Record", command=start_record).pack(pady=5)
+tk.Button(root, text="Stop", command=stop_record).pack(pady=5)
+tk.Button(root, text="Replay", command=start_replay).pack(pady=5)
+tk.Button(root, text="Toggle Loop", command=toggle_loop).pack(pady=5)
+tk.Button(root, text="Save", command=lambda: json.dump(events, open(filedialog.asksaveasfilename(defaultextension=".json"), "w"))).pack(pady=5)
+tk.Button(root, text="Load", command=lambda: globals().update(events=json.load(open(filedialog.askopenfilename())))).pack(pady=5)
 loop_label = tk.Label(root, text="Loop: Off")
 loop_label.pack()
-
 status = tk.Label(root, text="Idle")
 status.pack(pady=10)
 
