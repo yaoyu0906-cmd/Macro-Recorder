@@ -1,11 +1,6 @@
 """
-Macro Recorder v2.0
-Made by Alvin
-"""
-
-"""
-Bugs:
-No shift and scroll.
+Macro Recorder v2.2
+Made By Alvin
 """
 
 import tkinter as tk
@@ -49,8 +44,8 @@ def press(vk):
 def release(vk):
     user32.keybd_event(vk, 0, 2, 0)
 
-def mouse_event(flag, data=0):
-    user32.mouse_event(flag, 0, 0, data, 0)
+def mouse_event(flag):
+    user32.mouse_event(flag, 0, 0, 0, 0)
 
 def key_state(vk):
     return user32.GetAsyncKeyState(vk) & 0x8000 != 0
@@ -65,26 +60,6 @@ stop_replay = False
 
 events = []
 loop_forever = False
-
-# =========================
-# MOUSE
-# =========================
-
-def smooth_move(x1, y1, x2, y2, duration=0.015):
-    steps = max(1, int(duration / 0.003))
-
-    for i in range(steps):
-        if stop_replay:
-            return
-
-        t = i / steps
-        t = t * t * (3 - 2 * t)
-
-        x = int(x1 + (x2 - x1) * t)
-        y = int(y1 + (y2 - y1) * t)
-
-        set_mouse_pos(x, y)
-        time.sleep(duration / steps)
 
 # =========================
 # RECORD
@@ -105,12 +80,10 @@ def record():
         t = time.time() - start
 
         x, y = get_mouse_pos()
-
-        if abs(x - last_mouse[0]) > 2 or abs(y - last_mouse[1]) > 2:
+        if (x, y) != last_mouse:
             events.append({"time": t, "type": "mouse", "x": x, "y": y})
             last_mouse = (x, y)
 
-        # keys
         for vk in range(256):
             now = key_state(vk)
 
@@ -122,7 +95,6 @@ def record():
 
             last_keys[vk] = now
 
-        # clicks
         left = key_state(0x01)
         right = key_state(0x02)
 
@@ -138,7 +110,7 @@ def record():
             events.append({"time": t, "type": "click_up", "button": "right"})
         last_buttons["right"] = right
 
-        time.sleep(0.008)
+        time.sleep(0.008)  # ~120 FPS
 
 # =========================
 # TRIM
@@ -168,38 +140,59 @@ def replay():
 
     try:
         while True:
-            start = time.time()
-            last_mouse = get_mouse_pos()
+            prev_event = None
 
             for e in events:
                 if stop_replay:
                     return
 
-                while time.time() - start < e["time"]:
-                    if stop_replay:
-                        return
-                    time.sleep(0.0005)
+                if prev_event:
+                    delay = e["time"] - prev_event["time"]
+                else:
+                    delay = e["time"]
 
-                if e["type"] == "mouse":
-                    smooth_move(last_mouse[0], last_mouse[1], e["x"], e["y"])
-                    last_mouse = (e["x"], e["y"])
+                start_t = time.time()
+                end = start_t + delay
 
-                elif e["type"] == "down":
-                    press(e["vk"])
+                if e["type"] == "mouse" and prev_event and prev_event["type"] == "mouse":
+                    x1, y1 = prev_event["x"], prev_event["y"]
+                    x2, y2 = e["x"], e["y"]
 
-                elif e["type"] == "up":
-                    release(e["vk"])
+                    while time.time() < end:
+                        if stop_replay:
+                            return
 
-                elif e["type"] == "click_down":
-                    mouse_event(2 if e["button"] == "left" else 8)
+                        t = (time.time() - start_t) / delay if delay > 0 else 1
 
-                elif e["type"] == "click_up":
-                    mouse_event(4 if e["button"] == "left" else 16)
+                        x = int(x1 + (x2 - x1) * t)
+                        y = int(y1 + (y2 - y1) * t)
+
+                        set_mouse_pos(x, y)
+                        time.sleep(0.001)
+
+                else:
+                    # wait timing
+                    while time.time() < end:
+                        if stop_replay:
+                            return
+                        time.sleep(0.0005)
+
+                    if e["type"] == "down":
+                        press(e["vk"])
+                    elif e["type"] == "up":
+                        release(e["vk"])
+                    elif e["type"] == "click_down":
+                        mouse_event(2 if e["button"] == "left" else 8)
+                    elif e["type"] == "click_up":
+                        mouse_event(4 if e["button"] == "left" else 16)
+
+                prev_event = e
 
             if not loop_forever:
                 break
 
     finally:
+        # safety release
         for vk in range(256):
             release(vk)
 
@@ -242,18 +235,18 @@ def toggle_loop():
 # =========================
 
 root = tk.Tk()
-root.title("Macro Recorder v2.0")
+root.title("Macro Recorder v2.2")
 
-tk.Button(root, text="Record", command=start_record).pack(pady=5)
-tk.Button(root, text="Stop", command=stop_record).pack(pady=5)
-tk.Button(root, text="Replay", command=start_replay).pack(pady=5)
-tk.Button(root, text="Toggle Loop", command=toggle_loop).pack(pady=5)
-tk.Button(root, text="Save", command=lambda: json.dump(events, open(filedialog.asksaveasfilename(defaultextension=".json"), "w"))).pack(pady=5)
-tk.Button(root, text="Load", command=lambda: globals().update(events=json.load(open(filedialog.askopenfilename())))).pack(pady=5)
+tk.Button(root, text="🔴 Record", command=start_record).pack(pady=5)
+tk.Button(root, text="⏹ Stop", command=stop_record).pack(pady=5)
+tk.Button(root, text="▶ Replay", command=start_replay).pack(pady=5)
+tk.Button(root, text="🔁 Toggle Loop", command=toggle_loop).pack(pady=5)
+
+tk.Button(root, text="💾 Save", command=lambda: json.dump(events, open(filedialog.asksaveasfilename(defaultextension=".json"), "w"))).pack(pady=5)
+tk.Button(root, text="📂 Load", command=lambda: globals().update(events=json.load(open(filedialog.askopenfilename())))).pack(pady=5)
+
 loop_label = tk.Label(root, text="Loop: Off")
 loop_label.pack()
-status = tk.Label(root, text="Idle")
-status.pack(pady=10)
 
 # =========================
 # HOTKEYS
